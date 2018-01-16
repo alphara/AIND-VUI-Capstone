@@ -57,10 +57,10 @@ def cnn_rnn_model(input_dim, filters, kernel_size, conv_stride,
     # Add a recurrent layer
     simp_rnn = SimpleRNN(units, activation='relu',
         return_sequences=True, implementation=2, name='rnn')(bn_cnn)
-    # TODO: Add batch normalization
-    bn_rnn = ...
-    # TODO: Add a TimeDistributed(Dense(output_dim)) layer
-    time_dense = ...
+    # DONE: Add batch normalization
+    bn_rnn = BatchNormalization(name='bn')(simp_rnn)
+    # DONE: Add a TimeDistributed(Dense(output_dim)) layer
+    time_dense = TimeDistributed(Dense(output_dim, name='dense'), name='time_dense')(bn_rnn)
     # Add softmax activation layer
     y_pred = Activation('softmax', name='softmax')(time_dense)
     # Specify the model
