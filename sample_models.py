@@ -143,11 +143,10 @@ def bidirectional_rnn_model(input_dim, units, output_dim=29):
 
 def cnn_bidir_rnn_dropout_model(input_dim, filters, kernel_size, conv_stride,
     conv_border_mode, units, recur_layers, dropout=0.2, recurrent_dropout=0.2,
-    output_dim=28):
-    """ Convolutional bidirectional recurrent network with dropouts for speech
+    output_dim=29):
+    """ Convolutional and bidirectional recurrent neural network for speech
     """
     input_data = Input(name='the_input', shape=(None, input_dim))
-
     conv_1d = Conv1D(filters, kernel_size,
                      strides=conv_stride,
                      padding=conv_border_mode,
@@ -157,26 +156,22 @@ def cnn_bidir_rnn_dropout_model(input_dim, filters, kernel_size, conv_stride,
 
     recur = bn_cnn
     for i in range(recur_layers):
-        recur = Bidirectional(GRU(units,
-                                  activation='relu',
-                                  return_sequences=True,
-                                  implementation=2,
-                                  dropout=dropout,
-                                  recurrent_dropout=recurrent_dropout,
-                                  name='rnn_{}'.format(i)),
+        recur = Bidirectional(SimpleRNN(units,
+                                        activation='relu',
+                                        return_sequences=True,
+                                        implementation=2,
+                                        dropout=dropout,
+                                        recurrent_dropout=recurrent_dropout,
+                                        name='rnn_{}'.format(i)),
                               merge_mode='concat',
                               name='bd_rnn_{}'.format(i))(recur)
         recur = BatchNormalization(name='bn_{}'.format(i))(recur)
 
-    time_dense = TimeDistributed(Dense(output_dim, name='dense'),
-                                 name='time_dense')(recur)
-
+    time_dense = TimeDistributed(Dense(output_dim, name='dense'), name='time_dense')(recur)
     y_pred = Activation('softmax', name='softmax')(time_dense)
     model = Model(inputs=input_data, outputs=y_pred)
-
     model.output_length = lambda x: cnn_output_length(
         x, kernel_size, conv_border_mode, conv_stride)
-
     print(model.summary())
     return model
 
