@@ -179,6 +179,42 @@ def cnn_bidir_rnn_dropout_model(input_dim, filters, kernel_size, conv_stride,
     print(model.summary())
     return model
 
+def dilated_cnn_rnn_model(input_dim, filters, kernel_size,
+    units, output_dim=29):
+    """ Dilated convolutional and recurrent network for speech
+    """
+    input_data = Input(name='the_input', shape=(None, input_dim))
+
+    cnn = Conv1D(filters, kernel_size,
+                     strides=1,
+                     padding='causal',
+                     activation='relu',
+                     name='cnn')(input_data)
+    dilated_cnn = Conv1D(filters, kernel_size,
+                     strides=1,
+                     padding='causal',
+                     dilation_rate=2,
+                     activation='relu',
+                     name='dilated_cnn')(cnn)
+    bn_cnn = BatchNormalization(name='bn_cnn')(dilated_cnn)
+
+    simp_rnn = SimpleRNN(units, activation='relu',
+        return_sequences=True, implementation=2, name='simp_rnn')(bn_cnn)
+    bn_rnn = BatchNormalization(name='bn_rnn')(simp_rnn)
+
+    time_dense = TimeDistributed(Dense(output_dim, name='dense'),
+                                 name='time_dense')(bn_rnn)
+
+    y_pred = Activation('softmax', name='softmax')(time_dense)
+
+    model = Model(inputs=input_data, outputs=y_pred)
+    model.output_length = lambda x: x
+
+    #model.output_length = lambda x: cnn_output_length(
+    #    x, kernel_size, conv_border_mode, conv_stride)
+    print(model.summary())
+    return model
+
 def final_model():
     """ Build a deep network for speech
     """
