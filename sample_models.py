@@ -141,9 +141,9 @@ def bidirectional_rnn_model(input_dim, units, output_dim=29):
     print(model.summary())
     return model
 
-def cnn_bidir_rnn_dropout_model(input_dim, filters, kernel_size, conv_stride,
-    conv_border_mode, units, recur_layers, dropout=0.2, recurrent_dropout=0.2,
-    output_dim=29):
+def deeper_cnn_bidir_rnn_model(input_dim, filters, kernel_size, conv_stride,
+    conv_border_mode, units, bidir_rnn_layers, rnn_layers,
+    dropout=0.2, recurrent_dropout=0.2, output_dim=29):
     """ Convolutional and bidirectional recurrent neural network for speech
     """
     input_data = Input(name='the_input', shape=(None, input_dim))
@@ -155,17 +155,26 @@ def cnn_bidir_rnn_dropout_model(input_dim, filters, kernel_size, conv_stride,
     bn_cnn = BatchNormalization(name='bn_conv_1d')(conv_1d)
 
     recur = bn_cnn
-    for i in range(recur_layers):
+    for i in range(bidir_rnn_layers):
         recur = Bidirectional(SimpleRNN(units,
                                         activation='relu',
                                         return_sequences=True,
                                         implementation=2,
-                                        dropout=dropout,
-                                        recurrent_dropout=recurrent_dropout,
+                                        # dropout=dropout,
+                                        # recurrent_dropout=recurrent_dropout,
                                         name='rnn_{}'.format(i)),
                               merge_mode='concat',
                               name='bd_rnn_{}'.format(i))(recur)
         recur = BatchNormalization(name='bn_{}'.format(i))(recur)
+    for i in range(rnn_layers):
+        recur = SimpleRNN(units,
+                          activation='relu',
+                          return_sequences=True,
+                          implementation=2,
+                          # dropout=dropout,
+                          # recurrent_dropout=recurrent_dropout,
+                          name='s_rnn_{}'.format(i))(recur)
+        recur = BatchNormalization(name='s_bn_{}'.format(i))(recur)
 
     time_dense = TimeDistributed(Dense(output_dim, name='dense'), name='time_dense')(recur)
     y_pred = Activation('softmax', name='softmax')(time_dense)
