@@ -249,15 +249,59 @@ def cnn_rnn_dropout_model(input_dim, filters, kernel_size, conv_stride,
     print(model.summary())
     return model
 
+def dilated_deeper_cnn_bidir_rnn_dropout_model(input_dim, filters,
+    kernel_size, conv_stride, conv_border_mode, dilation_rate, units,
+    bidir_rnn_layers, dropout, recurrent_dropout, output_dim=29):
+    """ Convolutional and bidirectional recurrent neural network for speech
+    """
+    input_data = Input(name='the_input', shape=(None, input_dim))
+    conv_1d = Conv1D(filters, kernel_size,
+                     strides=conv_stride,
+                     padding=conv_border_mode,
+                     activation='relu',
+                     name='conv1d')(input_data)
+    dilated_conv_1d = Conv1D(filters, kernel_size,
+                     strides=1,
+                     padding=conv_border_mode,
+                     activation='relu',
+                     dilation_rate=dilation_rate,
+                     name='dilated_conv1d')(conv_1d)
+
+    bn_cnn = BatchNormalization(name='bn_conv_1d')(dilated_conv_1d)
+
+    recur = bn_cnn
+    for i in range(bidir_rnn_layers):
+        recur = Bidirectional(SimpleRNN(units,
+                                        activation='relu',
+                                        return_sequences=True,
+                                        implementation=2,
+                                        dropout=dropout,
+                                        recurrent_dropout=recurrent_dropout,
+                                        name='rnn_{}'.format(i)),
+                              merge_mode='concat',
+                              name='bd_rnn_{}'.format(i))(recur)
+        recur = BatchNormalization(name='bn_{}'.format(i))(recur)
+
+    time_dense = TimeDistributed(Dense(output_dim, name='dense'), name='time_dense')(recur)
+    y_pred = Activation('softmax', name='softmax')(time_dense)
+    model = Model(inputs=input_data, outputs=y_pred)
+    model.output_length = lambda x: cnn_output_length(
+      cnn_output_length(x, kernel_size, conv_border_mode, conv_stride),
+      kernel_size, conv_border_mode, 1, dilation=dilation_rate)
+    print(model.summary())
+    return model
+
 def final_model():
     """ Build a deep network for speech
     """
-    return deeper_cnn_bidir_rnn_model(input_dim=161, # change to 13 if you would like to use MFCC features
-                                      filters=200,
+    return dilated_deeper_cnn_bidir_rnn_dropout_model(input_dim=161, # change to 13 if you would like to use MFCC features
+                                      filters=250,
                                       kernel_size=11,
                                       conv_stride=2,
                                       conv_border_mode='valid',
-                                      units=200,
+                                      dilation_rate=2,
+                                      units=300,
                                       bidir_rnn_layers=1,
-                                      rnn_layers=1,
+                                      dropout=0.1,
+                                      recurrent_dropout=0.05
                                      )
