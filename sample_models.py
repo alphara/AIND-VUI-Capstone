@@ -142,8 +142,7 @@ def bidirectional_rnn_model(input_dim, units, output_dim=29):
     return model
 
 def deeper_cnn_bidir_rnn_model(input_dim, filters, kernel_size, conv_stride,
-    conv_border_mode, units, bidir_rnn_layers, rnn_layers,
-    dropout=0.2, recurrent_dropout=0.2, output_dim=29):
+    conv_border_mode, units, bidir_rnn_layers, rnn_layers, output_dim=29):
     """ Convolutional and bidirectional recurrent neural network for speech
     """
     input_data = Input(name='the_input', shape=(None, input_dim))
@@ -160,8 +159,6 @@ def deeper_cnn_bidir_rnn_model(input_dim, filters, kernel_size, conv_stride,
                                         activation='relu',
                                         return_sequences=True,
                                         implementation=2,
-                                        # dropout=dropout,
-                                        # recurrent_dropout=recurrent_dropout,
                                         name='rnn_{}'.format(i)),
                               merge_mode='concat',
                               name='bd_rnn_{}'.format(i))(recur)
@@ -171,8 +168,6 @@ def deeper_cnn_bidir_rnn_model(input_dim, filters, kernel_size, conv_stride,
                           activation='relu',
                           return_sequences=True,
                           implementation=2,
-                          # dropout=dropout,
-                          # recurrent_dropout=recurrent_dropout,
                           name='s_rnn_{}'.format(i))(recur)
         recur = BatchNormalization(name='s_bn_{}'.format(i))(recur)
 
@@ -257,15 +252,12 @@ def cnn_rnn_dropout_model(input_dim, filters, kernel_size, conv_stride,
 def final_model():
     """ Build a deep network for speech
     """
-    # Main acoustic input
-    input_data = Input(name='the_input', shape=(None, input_dim))
-    # TODO: Specify the layers in your network
-    ...
-    # TODO: Add softmax activation layer
-    y_pred = ...
-    # Specify the model
-    model = Model(inputs=input_data, outputs=y_pred)
-    # TODO: Specify model.output_length
-    model.output_length = ...
-    print(model.summary())
-    return model
+    return deeper_cnn_bidir_rnn_model(input_dim=161, # change to 13 if you would like to use MFCC features
+                                      filters=200,
+                                      kernel_size=11,
+                                      conv_stride=2,
+                                      conv_border_mode='valid',
+                                      units=200,
+                                      bidir_rnn_layers=1,
+                                      rnn_layers=1,
+                                     )
